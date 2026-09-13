@@ -29,10 +29,43 @@ button:disabled { opacity: .6; cursor: wait; }
 .hint { margin: 14px 2px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .error-box { margin-top: 18px; padding: 16px 18px; border-radius: 14px; background: #fff1f0; color: var(--danger); border: 1px solid #ffd4cf; }
 .result-card { margin-top: 24px; padding: 28px; }
-.result-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+.result-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
 .result-head h2 { margin: 0; }
-.secondary { width: auto; padding: 10px 14px; background: #eef1f6; color: #344054; font-size: 14px; }
+.source-meta { margin: 7px 0 0; color: var(--muted); font-size: 12px; word-break: break-all; }
+.result-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.secondary { width: auto; padding: 10px 14px; background: #eef1f6; color: #344054; font-size: 14px; white-space: nowrap; }
 .secondary:hover { background: #e3e7ee; }
 .plain-result { white-space: pre-wrap; line-height: 1.8; word-break: keep-all; font-family: inherit; font-size: 15px; }
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 26px 0 0; }
-@media (max-width: 640px) { .page-shell { padding-top: 34px; } .grid-2 { grid-template-columns: 1fr; gap: 0; } .form-card, .result-card { padding: 20px; } }
+
+@media (max-width: 640px) {
+  .page-shell { padding-top: 34px; }
+  .grid-2 { grid-template-columns: 1fr; gap: 0; }
+  .form-card, .result-card { padding: 20px; }
+  .result-head { flex-direction: column; }
+  .result-actions { width: 100%; justify-content: stretch; }
+  .result-actions .secondary { flex: 1; }
+}
+
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+@media print {
+  html, body { background: #fff; }
+  body { color: #111; }
+  .page-shell { width: 100%; margin: 0; padding: 0; }
+  .no-print { display: none !important; }
+  .result-card {
+    display: block !important;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .result-head { border-bottom: 1px solid #bbb; padding-bottom: 10px; margin-bottom: 14px; }
+  .source-meta { color: #555; }
+  .plain-result { font-size: 11pt; line-height: 1.65; white-space: pre-wrap; }
+}
