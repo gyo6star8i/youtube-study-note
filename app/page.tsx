@@ -7,7 +7,6 @@ type Length = "간단히" | "보통" | "자세히";
 
 export default function Home() {
   const [url, setUrl] = useState("");
-  const [accessCode, setAccessCode] = useState("");
   const [level, setLevel] = useState<Level>("중학교 1~2학년");
   const [length, setLength] = useState<Length>("보통");
   const [result, setResult] = useState("");
@@ -24,7 +23,7 @@ export default function Home() {
       const res = await fetch("/api/summarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, accessCode, level, length }),
+        body: JSON.stringify({ url, level, length }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "요약 중 오류가 발생했습니다.");
@@ -39,7 +38,7 @@ export default function Home() {
   return (
     <main className="page-shell">
       <section className="hero">
-        <span className="badge">교사용 AI 학습자료 도구</span>
+        <span className="badge">AI 학습자료 도구</span>
         <h1>YouTube AI 학습노트</h1>
         <p>유튜브 주소를 넣으면 영상을 분석해 학생 수준에 맞는 요약·핵심개념·용어풀이·확인문제를 만듭니다.</p>
       </section>
@@ -75,16 +74,6 @@ export default function Home() {
               </select>
             </div>
           </div>
-
-          <label>교사용 접속코드</label>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            placeholder="공유받은 접속코드"
-            value={accessCode}
-            onChange={(e) => setAccessCode(e.target.value)}
-          />
 
           <button type="submit" disabled={loading}>
             {loading ? "영상을 분석하고 있어요…" : "AI 학습자료 만들기"}
