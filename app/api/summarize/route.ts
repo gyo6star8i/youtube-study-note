@@ -14,16 +14,10 @@ function isYoutubeUrl(value: string) {
 
 export async function POST(request: Request) {
   try {
-    const { url, accessCode, level, length } = await request.json();
+    const { url, level, length } = await request.json();
 
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: "서버에 GEMINI_API_KEY가 설정되지 않았습니다." }, { status: 500 });
-    }
-    if (!process.env.APP_ACCESS_CODE) {
-      return NextResponse.json({ error: "서버에 APP_ACCESS_CODE가 설정되지 않았습니다." }, { status: 500 });
-    }
-    if (accessCode !== process.env.APP_ACCESS_CODE) {
-      return NextResponse.json({ error: "접속코드가 올바르지 않습니다." }, { status: 401 });
     }
     if (!url || !isYoutubeUrl(url)) {
       return NextResponse.json({ error: "올바른 YouTube 주소를 입력해 주세요." }, { status: 400 });
