@@ -1,6 +1,6 @@
 {
   "name": "youtube-study-note",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "next": "^15.5.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
