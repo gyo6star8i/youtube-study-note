@@ -40,6 +40,8 @@ npm run dev
    - `GEMINI_API_KEY`
    - `APP_ACCESS_CODE`
    - `GEMINI_MODEL` = `gemini-3.8-flash`
+   - `GEMINI_FALLBACK_MODELS` (선택) = `gemini-3.6-flash,gemini-3.5-flash-lite`
+     주 모델이 과부하(503)·한도(429)일 때 자동 재시도 후 예비 모델로 넘어갑니다.
 3. Deploy 합니다.
 
 ## 주의

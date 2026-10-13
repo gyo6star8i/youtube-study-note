@@ -12,6 +12,48 @@ function isYoutubeUrl(value: string) {
   }
 }
 
+// 과부하(503)·한도(429)·일시 오류(500, 504)는 잠시 후 재시도할 가치가 있음
+const RETRYABLE = new Set([429, 500, 503, 504]);
+const DEFAULT_FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
+const ATTEMPTS_PER_MODEL = 2;
+
+// GEMINI_MODEL: 주 모델, GEMINI_FALLBACK_MODELS: 쉼표로 구분한 예비 모델 목록
+function getModelList() {
+  const primary = (process.env.GEMINI_MODEL || "gemini-3.8-flash").trim();
+  const fallbacks = (process.env.GEMINI_FALLBACK_MODELS ?? DEFAULT_FALLBACKS.join(","))
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return [primary, ...fallbacks.filter((m) => m !== primary)];
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function callGeminiWithRetry(models: string[], payload: Record<string, unknown>) {
+  let last: { response: Response; data: any } | null = null;
+  for (const model of models) {
+    for (let attempt = 0; attempt < ATTEMPTS_PER_MODEL; attempt++) {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": process.env.GEMINI_API_KEY as string,
+        },
+        body: JSON.stringify({ model, ...payload }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) return { response, data };
+
+      last = { response, data };
+      console.warn(`Gemini ${model} 시도 ${attempt + 1} 실패: ${response.status}`);
+      if (!RETRYABLE.has(response.status)) return last;
+      // 같은 모델 재시도 전 잠시 대기(1.5초, 3초 …); 마지막 시도 뒤에는 바로 다음 모델로
+      if (attempt < ATTEMPTS_PER_MODEL - 1) await sleep(1500 * 2 ** attempt);
+    }
+  }
+  return last!;
+}
+
 export async function POST(request: Request) {
   try {
     const { url, level, length } = await request.json();
@@ -23,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "올바른 YouTube 주소를 입력해 주세요." }, { status: 400 });
     }
 
-    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const models = getModelList();
 
     const prompt = `
 너는 대한민국 학교의 교육자료 제작 전문가다. 아래 공개 YouTube 영상을 직접 분석하여 '${level}' 수준의 학습자료를 한국어로 작성하라.
@@ -73,28 +115,23 @@ export async function POST(request: Request) {
 영상 전체를 한 문장으로 정리한다.
 `;
 
-    const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          { type: "text", text: prompt },
-          { type: "video", uri: url },
-        ],
-      }),
+    const { response: geminiResponse, data: interaction } = await callGeminiWithRetry(models, {
+      input: [
+        { type: "text", text: prompt },
+        { type: "video", uri: url },
+      ],
     });
 
-    const interaction = await geminiResponse.json();
     if (!geminiResponse.ok) {
-      const apiMessage = interaction?.error?.message || `Gemini API 오류 (${geminiResponse.status})`;
-      if (geminiResponse.status === 429) {
-        return NextResponse.json({ error: "현재 무료 API 사용 한도에 도달했습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+      const status = geminiResponse.status;
+      console.error("Gemini API error:", status, interaction);
+      if (status === 429) {
+        return NextResponse.json({ error: "현재 AI 사용 한도에 도달했습니다. 1~2분 뒤 다시 시도해 주세요." }, { status: 429 });
       }
-      console.error("Gemini API error:", interaction);
+      if (RETRYABLE.has(status)) {
+        return NextResponse.json({ error: "지금 AI 사용자가 많아 자료를 만들지 못했습니다. 1~2분 뒤 다시 눌러 주세요." }, { status: 503 });
+      }
+      const apiMessage = interaction?.error?.message || `Gemini API 오류 (${status})`;
       return NextResponse.json({ error: apiMessage }, { status: 502 });
     }
 
